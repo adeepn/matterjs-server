@@ -80,6 +80,11 @@ const logger = Logger.get("MatterServer");
 // Log command line arguments at startup for debugging
 logger.info(`Command line: ${process.argv.slice(2).join(" ") || "(no arguments)"}`);
 
+// Set custom DCL production URL as environment variable for matter.js
+if (cliOptions.dclProductionUrl) {
+    process.env.MATTER_DCL_PRODUCTIONURL = cliOptions.dclProductionUrl;
+}
+
 const env = Environment.default;
 
 // Apply CLI options to environment variables
@@ -168,6 +173,7 @@ async function start() {
             disableOtaProvider: cliOptions.disableOta,
             serverId: legacyData.serverId,
             serverVersion: MATTER_SERVER_VERSION,
+            dclProductionUrl: cliOptions.dclProductionUrl,
         },
         legacyServerData,
     );

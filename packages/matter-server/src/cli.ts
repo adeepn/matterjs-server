@@ -52,6 +52,7 @@ export interface CliOptions {
 
     // Certificate configuration
     enableTestNetDcl: boolean;
+    dclProductionUrl: string | null;
 
     // Bluetooth configuration
     bluetoothAdapter: number | null;
@@ -99,6 +100,11 @@ export function parseCliArgs(argv?: string[]): CliOptions {
     const program = new Command();
 
     program.name("matter-server").description("Matter Controller Server using WebSockets.").version(VERSION);
+
+    // When called programmatically (e.g. tests), throw on errors instead of calling process.exit()
+    if (argv !== undefined) {
+        program.exitOverride();
+    }
 
     program
         .addOption(
@@ -148,6 +154,31 @@ export function parseCliArgs(argv?: string[]): CliOptions {
                 .preset(true)
                 .default(false)
                 .env("ENABLE_TEST_NET_DCL"),
+        )
+        .addOption(
+            new Option(
+                "--dcl-production-url <url>",
+                "Custom DCL production server URL (default: https://on.dcl.csa-iot.org)",
+            )
+                .argParser((value: string) => {
+                    const trimmed = value.trim();
+                    if (!trimmed) {
+                        throw new InvalidArgumentError("URL must not be empty");
+                    }
+                    let url: URL;
+                    try {
+                        url = new URL(trimmed);
+                    } catch {
+                        throw new InvalidArgumentError(`Invalid URL: "${trimmed}"`);
+                    }
+                    if (url.protocol !== "https:" && url.protocol !== "http:") {
+                        throw new InvalidArgumentError(
+                            `Unsupported URL scheme "${url.protocol}". Only http and https are allowed.`,
+                        );
+                    }
+                    return trimmed;
+                })
+                .env("DCL_PRODUCTION_URL"),
         )
         .addOption(
             new Option("--bluetooth-adapter <id>", "Bluetooth adapter HCI ID (e.g., 0 for hci0)")
@@ -217,6 +248,7 @@ export function parseCliArgs(argv?: string[]): CliOptions {
         logFile: opts.logFile ?? null,
         primaryInterface: opts.primaryInterface ?? null,
         enableTestNetDcl: opts.enableTestNetDcl,
+        dclProductionUrl: opts.dclProductionUrl ?? null,
         bluetoothAdapter: opts.bluetoothAdapter ?? null,
         disableOta: opts.disableOta,
         otaProviderDir: opts.otaProviderDir ?? null,

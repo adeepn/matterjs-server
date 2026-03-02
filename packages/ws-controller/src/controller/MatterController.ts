@@ -45,6 +45,8 @@ export interface MatterControllerOptions {
     serverId?: string;
     /** Server version string (e.g., "0.2.10" or "0.2.10-alpha.0"). Used for BasicInformation cluster. */
     serverVersion?: string;
+    /** Custom DCL production server URL. Overrides the default https://on.dcl.csa-iot.org */
+    dclProductionUrl?: string | null;
 }
 
 /**
@@ -75,6 +77,7 @@ export class MatterController {
     #legacyCommissionedDates?: Map<string, Timestamp>;
     #enableTestNetDcl = false;
     #disableOtaProvider = true;
+    #dclProductionUrl?: string;
 
     static async create(
         environment: Environment,
@@ -145,6 +148,7 @@ export class MatterController {
         this.#serverVersion = options.serverVersion ?? "0.0.0";
         this.#enableTestNetDcl = options.enableTestNetDcl ?? this.#enableTestNetDcl;
         this.#disableOtaProvider = options.disableOtaProvider ?? this.#disableOtaProvider;
+        this.#dclProductionUrl = options.dclProductionUrl ?? undefined;
     }
 
     protected async initialize(
@@ -223,7 +227,9 @@ export class MatterController {
      */
     get vendorInfoService(): DclVendorInfoService {
         if (!this.#env.has(DclVendorInfoService)) {
-            new DclVendorInfoService(this.#env);
+            new DclVendorInfoService(this.#env, {
+                dclConfig: this.#dclProductionUrl ? { url: this.#dclProductionUrl } : undefined,
+            });
         }
         return this.services.get(DclVendorInfoService);
     }
@@ -234,7 +240,10 @@ export class MatterController {
      */
     get certificateService() {
         if (!this.#env.has(DclCertificateService)) {
-            new DclCertificateService(this.#env, { fetchTestCertificates: this.#enableTestNetDcl });
+            new DclCertificateService(this.#env, {
+                fetchTestCertificates: this.#enableTestNetDcl,
+                dclConfig: this.#dclProductionUrl ? { url: this.#dclProductionUrl } : undefined,
+            });
         }
         return this.services.get(DclCertificateService);
     }
